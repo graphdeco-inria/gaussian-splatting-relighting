@@ -1,3 +1,14 @@
+#
+# Copyright (C) 2023, Inria
+# GRAPHDECO research group, https://team.inria.fr/graphdeco
+# All rights reserved.
+#
+# This software is free for non-commercial, research and evaluation use 
+# under the terms of the LICENSE.md file.
+#
+# For inquiries contact  george.drettakis@inria.fr
+#
+
 import os
 import sys
 from PIL import Image
@@ -7,10 +18,14 @@ from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
+from typing import Optional
 from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import torch 
+import torchvision.transforms.functional as TF
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -19,6 +34,7 @@ class CameraInfo(NamedTuple):
     FovY: np.array
     FovX: np.array
     image: np.array
+    relit_images: Optional[np.array]
     image_path: str
     image_name: str
     width: int
@@ -54,14 +70,15 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readColmapCameras(args, cam_extrinsics, cam_intrinsics, images_folder):
     cam_infos = []
-    for idx, key in enumerate(cam_extrinsics):
+
+    def get_info(datum):
+        idx, key = datum
         sys.stdout.write('\r')
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
+        sys.stdout.write("Reading camera {}/{}".format(idx+1, len(all_cam_ids)))
         sys.stdout.flush()
-
         extr = cam_extrinsics[key]
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
@@ -71,25 +88,55 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
 
-        if intr.model=="SIMPLE_PINHOLE":
+        if intr.model == "SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
-        elif intr.model=="PINHOLE":
+        elif intr.model == "PINHOLE":
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
         else:
-            assert False, "Colmap camera model not handled!"
+            assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
-        image = Image.open(image_path)
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
-        cam_infos.append(cam_info)
+        assert "/test/" or "/train/" in images_folder
+        split = "test" if "/test/" in images_folder else "train"
+        
+        image = Image.open(image_path)
+        
+        if (not args.resume or args.train_after_resume) and not (hasattr(args, "skip_loading_relit_images") and args.skip_loading_relit_images) and not (args.camera_ids != [-1] and int(extr.name.split(".")[0]) not in args.camera_ids):
+            relit_images = []
+            for k in range(500): # assuming fewer than 500 relightings per viewpoint...
+                if k in args.train_dirs:
+                    assert ".png" in image_path
+                    if os.name != 'nt':
+                        assert "colmap/" in image_path
+                        assert f"/{split}/images/" in image_path 
+                    
+                    if os.name == 'nt':
+                        relit_image_path = image_path.replace(f"/{split}\\images\\", f"\{split}\\relit_images\\").replace(".png", f"_dir_{k:02d}.png")
+                    else:
+                        relit_image_path = image_path.replace(f"/{split}/images/", f"/{split}/relit_images/").replace(".png", f"_dir_{k:02d}.png")
+                        
+                    relit_images.append(Image.open(relit_image_path).convert("RGB"))
+                else:
+                    relit_images.append(None)
+        else:
+            relit_images = None
+
+        return CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, relit_images=relit_images, image_path=image_path, image_name=image_name, width=width, height=height)
+    
+    all_cam_ids = sorted(cam_extrinsics.keys(), key=lambda k: cam_extrinsics[k].name)
+    all_cam_ids = all_cam_ids[:args.max_images]
+
+    with ThreadPoolExecutor(max_workers=9) as executor:
+        for info in executor.map(get_info, enumerate(all_cam_ids)): 
+            cam_infos.append(info)
+
     sys.stdout.write('\n')
     return cam_infos
 
@@ -118,7 +165,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, llffhold=8):
+def readColmapSceneInfo(args, path, images, eval, llffhold=8):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -131,7 +178,8 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+    cam_infos_unsorted = readColmapCameras(args, cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
     if eval:
@@ -141,11 +189,14 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         train_cam_infos = cam_infos
         test_cam_infos = []
 
+    # if "/test" in path:
+    #     train_cam_infos = [x for i, x in enumerate(train_cam_infos) if i % 10 == 0]
+
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
-    ply_path = os.path.join(path, "sparse/0/points3d.ply")
-    bin_path = os.path.join(path, "sparse/0/points3d.bin")
-    txt_path = os.path.join(path, "sparse/0/points3d.txt")
+    ply_path = os.path.join(path, "sparse/0/points3D.ply")
+    bin_path = os.path.join(path, "sparse/0/points3D.bin")
+    txt_path = os.path.join(path, "sparse/0/points3D.txt")
     if not os.path.exists(ply_path):
         print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
@@ -165,7 +216,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
                            ply_path=ply_path)
     return scene_info
 
-def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png"):
+def readCamerasFromTransforms(args, path, transformsfile, white_background, extension=".png"):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -202,11 +253,11 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
             
     return cam_infos
 
-def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
+def readNerfSyntheticInfo(args, path, white_background, eval, extension=".png"):
     print("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", white_background, extension)
+    train_cam_infos = readCamerasFromTransforms(args, path, "transforms_train.json", white_background, extension)
     print("Reading Test Transforms")
-    test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", white_background, extension)
+    test_cam_infos = readCamerasFromTransforms(args, path, "transforms_test.json", white_background, extension)
     
     if not eval:
         train_cam_infos.extend(test_cam_infos)

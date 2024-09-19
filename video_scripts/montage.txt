@@ -1,0 +1,20 @@
+file 'out_real_garagewall_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_real_garagewall_v5_no_subset_k4_ken_burns_0.mp4'
+
+file 'out_real_multilight_kettle_2_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_real_multilight_kettle_2_v5_no_subset_k4_ken_burns_0.mp4'
+
+file 'out_real_multilight_chestdrawer_2_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_real_multilight_chestdrawer_2_v5_no_subset_k4_ken_burns_0.mp4'
+
+file 'out_real_paintgun_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_real_paintgun_v5_no_subset_k4_ken_burns_0.mp4'
+
+file 'out_real_multilight_pans_2_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_real_multilight_pans_2_v5_no_subset_k4_ken_burns_0.mp4'
+
+#file 'out_vendored_mipnerf_counter_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_vendored_mipnerf_counter_v5_no_subset_k4_ken_burns_0.mp4'
+
+#file 'out_vendored_mipnerf_room_v5_no_subset_k4_ken_burns_1.mp4'
+file 'out_vendored_mipnerf_room_v5_no_subset_k4_ken_burns_0.mp4'

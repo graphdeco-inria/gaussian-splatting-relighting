@@ -1,18 +1,65 @@
+#
+# Copyright (C) 2023, Inria
+# GRAPHDECO research group, https://team.inria.fr/graphdeco
+# All rights reserved.
+#
+# This software is free for non-commercial, research and evaluation use 
+# under the terms of the LICENSE.md file.
+#
+# For inquiries contact  george.drettakis@inria.fr
+#
+
 from scene.cameras import Camera
 import numpy as np
-from utils.general_utils import PILtoTorch
+from utils.general_utils import PILtoTorch, PILtoTorchU8
 from utils.graphics_utils import fov2focal
+from tqdm import tqdm 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+WARNED = False
 
 def loadCam(args, id, cam_info, resolution_scale):
     orig_w, orig_h = cam_info.image.size
 
-    if args.resolution in [1, 2, 4, 8]:
-        resolution = round(orig_w/(resolution_scale * args.resolution)), round(orig_h/(resolution_scale * args.resolution))
-    else:  # should be a type that converts to float
-        global_down = orig_w/args.resolution
-        scale = float(global_down) * float(resolution_scale)
-        resolution = (int(orig_w / scale), int(orig_h / scale))
+    # if args.resolution in [1, 2, 4, 8]:
+    #     resolution = round(orig_w/(resolution_scale * args.resolution)), round(orig_h/(resolution_scale * args.resolution))
+    # else:  # should be a type that converts to float
+    #     if args.resolution == -1:
+    #         if orig_w > 1600:
+    #             global WARNED
+    #             if not WARNED:
+    #                 print("[ INFO ] Encountered quite large input images (>1.6K pixels width), rescaling to 1.6K.\n "
+    #                     "If this is not desired, please explicitly specify '--resolution/-r' as 1")
+    #                 WARNED = True
+    #             global_down = orig_w / 1600
+    #         else:
+    #             global_down = 1
+    #     else:
+    #         global_down = orig_w / args.resolution
 
+    #     scale = float(global_down) * float(resolution_scale)
+    #     resolution = (int(orig_w / scale), int(orig_h / scale))
+
+    if args.resolution == [-1, -1]:
+        # if orig_w > 1600:
+        #     global WARNED
+        #     if not WARNED:
+        #         print("[ INFO ] Encountered quite large input images (>1.6K pixels width), rescaling to 1.6K.\n "
+        #             "If this is not desired, please explicitly specify '--resolution/-r' as 1")
+        #         WARNED = True
+        #     global_down = orig_w / 1600
+        # else:
+        #     global_down = 1
+        resolution = cam_info.image.size
+    else:
+        resolution = args.resolution
+
+    if cam_info.relit_images is not None:
+        relit_images = [
+            PILtoTorchU8(image, resolution)[:3, ...] if image is not None else None for image in cam_info.relit_images
+        ]
+    else:
+        relit_images = None
     resized_image_rgb = PILtoTorch(cam_info.image, resolution)
 
     gt_image = resized_image_rgb[:3, ...]
@@ -23,14 +70,15 @@ def loadCam(args, id, cam_info, resolution_scale):
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
-                  image=gt_image, gt_alpha_mask=loaded_mask,
+                  image=gt_image, relit_images=relit_images, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=id)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
 
-    for id, c in enumerate(cam_infos):
-        camera_list.append(loadCam(args, id, c, resolution_scale))
+    with ThreadPoolExecutor(max_workers=9) as executor:
+        for result in tqdm(executor.map(lambda x: loadCam(args, x[0], x[1], resolution_scale), enumerate(cam_infos))):
+            camera_list.append(result)
 
     return camera_list
 

@@ -1,0 +1,14 @@
+{
+    "include":[
+        "arguments.py",
+        "convert.py", 
+        "train.py",
+        "/scene/*.py",
+        "/gaussian_renderer/*.py",
+        "/data/*.py", 
+        "/lpipsPyTorch/*.py",
+        "render.py", 
+        "render_relighting.py",
+        "metrics.py"
+    ]
+}

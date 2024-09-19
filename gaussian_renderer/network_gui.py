@@ -1,3 +1,14 @@
+#
+# Copyright (C) 2023, Inria
+# GRAPHDECO research group, https://team.inria.fr/graphdeco
+# All rights reserved.
+#
+# This software is free for non-commercial, research and evaluation use 
+# under the terms of the LICENSE.md file.
+#
+# For inquiries contact  george.drettakis@inria.fr
+#
+
 import torch
 import traceback
 import socket
@@ -48,7 +59,7 @@ def receive():
 
     width = message["resolution_x"]
     height = message["resolution_y"]
-
+    
     if width != 0 and height != 0:
         try:
             do_training = bool(message["train"])
@@ -60,6 +71,11 @@ def receive():
             do_rot_scale_python = bool(message["rot_scale_python"])
             keep_alive = bool(message["keep_alive"])
             scaling_modifier = message["scaling_modifier"]
+            theta = message["theta"]
+            phi = message["phi"]
+            renderMode = message["render_mode"]
+            latentView = message["latent_view"]
+            latentDir = message["latent_dir"]
             world_view_transform = torch.reshape(torch.tensor(message["view_matrix"]), (4, 4)).cuda()
             world_view_transform[:,1] = -world_view_transform[:,1]
             world_view_transform[:,2] = -world_view_transform[:,2]
@@ -67,9 +83,9 @@ def receive():
             full_proj_transform[:,1] = -full_proj_transform[:,1]
             custom_cam = MiniCam(width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform)
         except Exception as e:
-            print("")
+            print("failed to parse json")
             traceback.print_exc()
             raise e
-        return custom_cam, do_training, do_shs_python, do_rot_scale_python, keep_alive, scaling_modifier
+        return custom_cam, do_training, do_shs_python, do_rot_scale_python, keep_alive, scaling_modifier, theta, phi, renderMode, latentView, latentDir
     else:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None, None, None 
