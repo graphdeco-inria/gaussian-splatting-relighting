@@ -5,11 +5,10 @@ Yohan Poirier-Ginter, Alban Gauthier, Julien Philip, Jean-François, Lalonde, Ge
 <!-- | [Pre-trained Models (14 GB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip) | [Evaluation Images (7 GB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/evaluation/images.zip) | -->
 
 This is the main repository of our work "A Diffusion Approach to Radiance Field Relighting using Multi-Illumination Synthesis". 
-**To use our method you will first need to use our single-view relighting network to transform single-illumination captures into generated multi-illumination captures.** [Instructions are available in the secondary repository](). Note that this can only be expected to work well in indoor scenes.
 
-<!-- ### Using the real-time viewer
-Alternatively, you can use the real-time viewer to inspect pretrained scenes; [for Windows it can be downloaded directly here](). For Linux you will need to compile it from source, for this refer to the instructions in the [Gaussian Splatting repository]().
-[This link contains every pretrained scene shown in the paper](). -->
+**To use our method on your own scenes you will first need to use our single-view relighting network to transform single-illumination captures into generated multi-illumination captures.** [Instructions are available in the secondary repository](). Note that this can only be expected to work well in indoor scenes. 
+
+Alternatively, you can use viewer to inspect pretrained scenes; [for Windows it can be downloaded directly here](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/viewer.zip). For Linux you will need to compile it from source, for this refer to the instructions in the [Gaussian Splatting repository](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/). Intructions to download and view pretrained scenes are available below.
 
 ## Installation
 First clone the repo with:
@@ -37,7 +36,7 @@ Launch training with:
 ```bash
 python train.py -s colmap/real/kettle --viewer
 ```
-you can remove the --viewer flag if the interactive viewer isn't needed.
+you can remove the --viewer flag if the interactive viewer isn't needed. To use the viewer, [download the files](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/viewer.zip) and launch `SIBR_remoteGaussian_app_rwdi.exe` while a scene is training. 
 
 The output files will be saved in `output/kettle/00` by default. 
 
@@ -91,10 +90,7 @@ bash download_synthetic_samples.sh
 
 You can then train and render every scene with the following command:
 ```bash
-for SCENE in colmap/synthetic/*; do 
-    python train.py --halfres -s $SCENE
-    python render.py -m ${SCENE/colmap/output}
-done
+bash train_all_synthetic_scenes.sh
 ```
 
 You can also render videos for a few relit direction, as well as light sweep videos with:
