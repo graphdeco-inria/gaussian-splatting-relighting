@@ -1,6 +1,7 @@
 # A Diffusion Approach to Radiance Field Relighting using Multi-Illumination Synthesis
 Yohan Poirier-Ginter, Alban Gauthier, Julien Philip, Jean-François, Lalonde, George Drettakis<br>
 | [Webpage](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/) | [Paper](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/content/paper.pdf) | [Video](https://www.youtube.com/watch?v=1vR0TsAuH1Q) | [Other GRAPHDECO Publications](http://www-sop.inria.fr/reves/publis/gdindex.php) | [FUNGRAPH project page](https://fungraph.inria.fr) | [Datasets](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/datasets/) | [Viewer](https://repo-sam.inria.fr/fungraph/generative-radiance-field-relighting/viewer.zip) | <br>
+
 ![Teaser image](assets/teaser.png)
 <!-- | [Pre-trained Models (14 GB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip) | [Evaluation Images (7 GB)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/evaluation/images.zip) | -->
 
