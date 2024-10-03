@@ -207,13 +207,13 @@ void sibr::RemotePointView::onGUI()
 		ImGui::Checkbox("Rot-Scale Python", &_doRotScalePython);
 		ImGui::Checkbox("Keep model alive (after training)", &_keepAlive);
 		ImGui::SliderFloat("Scaling Modifier", &_scalingModifier, 0.001f, 1.0f);
-		ImGui::Combo("Rendering Mode", &_renderMode, "RGB\0Depth\0Shadows\0\0");
+		// ImGui::Combo("Rendering Mode", &_renderMode, "RGB\0Depth\0Shadows\0\0");
 		// ------------------------------------------------------------------------
 		ImGui::SliderFloat("Illum Theta", &_theta, 0.001f, 1.570796326795f);
 		ImGui::SliderFloat("Illum Phi", &_phi, -3.14159265359f, 3.14159265359f);
 		// ------------------------------------------------------------------------
-		ImGui::SliderInt("Latent View", &_latent_view, 0, 200);
-		ImGui::SliderInt("Latent Dir", &_latent_dir, 0, 24);
+		// ImGui::SliderInt("Latent View", &_latent_view, 0, 200);
+		// ImGui::SliderInt("Latent Dir", &_latent_dir, 0, 24);
 	}
 	ImGui::End();
 }
