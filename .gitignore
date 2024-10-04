@@ -5,8 +5,7 @@ output
 build
 /output*/
 
-/colmap/
-/colmap_*
+/colmap*
 
 /*.std
 /*.mp4
