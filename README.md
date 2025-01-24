@@ -66,7 +66,7 @@ python train.py -m $MODEL --resume --viewer
 
 You can download our pre-trained scenes with:
 ```bash 
-bash download_pretrained_scenes.sh
+bash download_real_scenes.sh
 ```
 
 #### Some tips for best quality
