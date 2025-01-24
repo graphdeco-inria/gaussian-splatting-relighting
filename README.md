@@ -14,7 +14,7 @@ Alternatively, you can use viewer to inspect pretrained scenes; [for Windows it 
 ## Installation
 First clone the repo with:
 ```bash
-git clone --recursive https://gitlab.inria.fr/ypoirier/gaussian-splatting-relighting.git
+git clone --recursive https://github.com/graphdeco-inria/gaussian-splatting-relighting
 ```
 
 Then create the environment. We recommend keeping a separate environment as the one you will use for relighting. This can be be done with:
