@@ -207,7 +207,7 @@ if __name__ == "__main__":
     parser.add_argument("--view_number", default=0, type=int)
     parser.add_argument("--static_light_id", default=23, type=int)
     parser.add_argument("--num_frames", default=270, type=int)
-    
+
     args = get_combined_args(parser)
     args.skip_test = True 
     print("Rendering " + args.model_path)
@@ -221,7 +221,14 @@ if __name__ == "__main__":
     modelParams.resume = False
     modelParams.train_dirs = list(range(25))
     modelParams.preview_dirs = list(range(25))
-    
+
+    if "znear_pruning" not in modelParams:
+        modelParams.znear_pruning = True
+    if "znear_scale" not in modelParams:
+        modelParams.znear_scale = 0.9
+    if "znear_quantile" not in modelParams:
+        modelParams.znear_quantile = 0.01
+
     args.skip_loading_relit_images = True
     modelParams.skip_loading_relit_images = True
 
